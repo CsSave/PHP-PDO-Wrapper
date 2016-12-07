@@ -179,11 +179,11 @@ class db {
         }      
     }     
     
-   	public function count()	{
-		return $this->_count;
-	}        
+   public function count(){
+	return $this->_count;
+   }        
     
-    public function exec($sql) {
+   public function exec($sql) {
          $query = $this->db->prepare($sql);  
          $query->execute();
     }
