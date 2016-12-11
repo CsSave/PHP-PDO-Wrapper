@@ -16,12 +16,7 @@
  *             ->order('nombre desc')
  *             ->limit([0,5])
  *             ->result();
- * 
- * - En SELECT COUNT igual que un select los parametros
- * $rows = $db->selectCount('_test');
- * - Para devolver el numero de filas de una consulta COUNT usaremos fetchColumn
- * $total = $db->_countRows; 
- * 
+ *  
  * - Recorregido de una consulta con foreach
  * foreach ($rows as $row) { echo '<br />'.$row["id"].' '.$row["nombre"]; }
  * 
