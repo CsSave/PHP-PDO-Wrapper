@@ -10,14 +10,15 @@
  * $db = new db();
  * 
  * - Consultas con select
- * $rows = $db->select('_table');
- * $rows = $db->select('_table', ['id','=',54]);                 // with clausule where
- * $rows = $db->select('_table', ['id','=',54], 'nombre desc', '');      // with where and order
- * $rows = $db->select('_table', '', 'nombre asc', [0,5]); // with no where
- * $rows = $db->select('_table', '', '', '0,6');                         // with limit values
+ * $rows = $db->select('id','nombre')
+ *             ->from('_test')
+ *             ->where(['id','=',55])
+ *             ->order('nombre desc')
+ *             ->limit([0,5])
+ *             ->result();
  * 
  * - En SELECT COUNT igual que un select los parametros
- * $rows = $db->selectCount('_table');
+ * $rows = $db->selectCount('_test');
  * - Para devolver el numero de filas de una consulta COUNT usaremos fetchColumn
  * $total = $db->_countRows; 
  * 
@@ -28,16 +29,23 @@
  * $valores = ['nombre' => 'jose',
  *            'descripcion' => 'escritor',
  *            'estado' => 1];
- * $db->insert('_table', $valores);        
+ * $db->into('_test')
+ *     ->values($valores)
+ *     ->insert()        
  * 
  * - Update de registros en tabla
  * $valores = ['nombre' => 'manolo',
  *             'descripcion' => 'obrero',
  *             'estado' => '1'];
- * $db->update('_table', $valores, ['id', '=', 57]);
+ * $db->table('_test')
+ *     ->set($valores)
+ *     ->where(['id','=',54])
+ *     ->update();
  * 
  * - Borrando registros de una tabla
- * $db->delete('_table', ['id','=',51]);
+ * $db->from('_test')
+ *     ->where(['id','=',56])
+ *     ->delete();
  * 
  * - Para mostrar un breve debug de la consulta SQL
  * $db->sql();
@@ -67,9 +75,12 @@ class db {
     private $pass = _DB_PASS; 
     private $charset = _DB_CHARSET;
     
+    private $table;
+    
     const _WHERE = ' WHERE ';
     const _ORDER = ' ORDER BY '; 
     const _LIMIT = ' LIMIT ';    
+    
     
     public function __construct(){
         
@@ -87,7 +98,7 @@ class db {
         
     }
     
-    public function query($sql, $params = []){        
+    public function query($sql, $params = []){           
         $query = $this->db->prepare($sql);        
         if(count($params)) {
             foreach ($params as $f => $v) {
@@ -96,38 +107,39 @@ class db {
         }
         if ($query->execute()){ 
             $this->_sql = $query;
-            $this->_count = $query->rowCount(); // registros afectados
-            $this->_countRows = $query->fetchColumn(); // numero de registros 
+            //$this->_count = $query->rowCount(); // registros afectados
+            //$this->_countRows = $query->fetchColumn(); // numero de registros 
             return $query;    
         }        
     }    
     
-    function select($table, $where = [], $order = NULL, $limit = []) {             
-        $this->_query = 'select * from '.$this->table($table).' '.$this->where($where).' '.$this->order($order).' '.$this->limit($limit);
-        return $this->query($this->_query, $this->_params);                
+    function select(){    
+        $this->_select=func_get_args();        
+        return $this;                
     }
     
-    function selectCount($table, $where = [], $order = NULL, $limit = []) {             
-        $this->_query = 'select count(*) from '.$this->table($table).' '.$this->where($where).' '.$this->order($order).' '.$this->limit($limit);
-        return $this->query($this->_query, $this->_params);                
-    }
+    function result() {
+        $this->_sql = ' SELECT '.join(',',$this->_select).' FROM '.$this->_table;  
+        if (!empty($this->_where)) $this->_sql .=  $this->_where;
+        if (!empty($this->_order)) $this->_sql .= $this->_order;
+        if (!empty($this->_limit)) $this->_sql .=  $this->_limit;        
+        return $this->query($this->_sql, $this->_params);
+    }    
         
     function where($where = []) {        
-        if($where) { 
-            
+        if($where) {             
             $field = $where[0]; $operator = $where[1]; $value = $where[2];
-            $values = [$field => $value];
-            
+            $values = [$field => $value];            
             $this->_where = self::_WHERE.' '.$field.' '.$operator.' :'.$field;   
             $this->_params = $values; // parametro del where            
-            return $this->_where; 
+            return $this; 
         }           
     }
     
     function order($order = NULL){        
         if ($order) { 
             $this->_order =  self::_ORDER.' '.$order;
-            return $this->_order;
+            return $this;
         }        
     }
     
@@ -136,61 +148,74 @@ class db {
             $from = $limit[0]; $to = $limit[1];
             $limit = $from.','.$to;            
             $this->_limit = self::_LIMIT.' '.$limit;
-            return $this->_limit; 
+            return $this; 
         }
     }
     
-    public function insert($table, $values = []) { 
-        if(count($values)) {           
-            
+    public function insert(){
+        $this->_sql = 'INSERT INTO '.$this->_table.' ('.$this->fields.') VALUES ('.$this->ins.')';
+        $this->_params = $this->values; // parametros
+        return $this->query($this->_sql, $this->_params);
+    }
+    
+    public function values($values = []) {        
+        if(count($values)) {
             foreach ($values as $field => $v)
                 $ins[] = ':' . $field;
     
-            $ins = implode(', ', $ins);
-            $fields = implode(', ', array_keys($values));
-            
-            $this->_query = 'INSERT INTO '.$this->table($table).' ('.$fields.') VALUES ('.$ins.')';
-            $this->_params = $values; // parametros
-            
-            if(!$this->query($this->_query, $this->_params)) { return true; }
-                        
+            $this->ins = implode(', ', $ins);
+            $this->fields = implode(', ', array_keys($values));
+            $this->values = $values;
+            return $this;
         }
-       return false;
     }
     
-    public function update($table, $values = [], $where = []) {
-        if(count($values) && $where) {            
-            
+    public function update() {        
+        $this->_sql = 'UPDATE '.$this->_table .' SET '.$this->ins.' '.$this->_where;    
+        $this->_params = array_merge($this->values, $this->_params); // parametros update+where
+        return $this->query($this->_sql, $this->_params);
+    }       
+    
+    public function set($values = []) {        
+        if(count($values)) { 
             foreach ($values as $field => $v)
                 $ins[] =  $field. ' = ' . ':'.$field;
             
-            $ins = implode(', ', $ins);                     
-            $this->_query = 'UPDATE '.$this->table($table) .' SET '.$ins.' '.$this->where($where);
-            $this->_params = array_merge($values, $this->_params); // parametros update+where 
-            
-            if(!$this->query($this->_query, $this->_params)) { return true; }      
-       }
-    }        
+            $this->ins = implode(', ', $ins);   
+            $this->values = $values;            
+            return $this;    
+       }  
+    } 
     
-    public function delete($table, $where = []) {
-        if($where) {            
-            $this->_query = ' DELETE FROM '.$this->table($table).' '.$this->where($where);            
-            if(!$this->query($this->_query, $this->_params)) { return true; }
+    public function delete() {
+        if($this->_where) {            
+            $this->_sql = ' DELETE FROM '.$this->_table.' '.$this->_where;            
+            return $this->query($this->_sql, $this->_params);
         }      
     }     
     
-   public function count(){
-	return $this->_count;
-   }        
+   	public function count()	{
+		return $this->_count;
+	}        
     
-   public function exec($sql) {
+    public function exec($sql) {
          $query = $this->db->prepare($sql);  
          $query->execute();
     }
-            
-    protected function table($table) {
-        $table = '`'.$table.'`' ;
-        return $table;
+         
+    public function table($table) {
+        $this->_table = '`'.$table.'`' ;
+        return $this;
+    }  
+                
+    public function from($table) { 
+        $this->table($table);
+        return $this;
+    }
+
+    public function into($table) {
+        $this->table($table);
+        return $this;
     }
     
     public function sql(){        
