@@ -17,6 +17,13 @@
  *             ->limit([0,5])
  *             ->result();
  *  
+ * - Consultas con select count(*) para contar numero de filas.
+ * $rows = $db->select('count(*))
+ *             ->from('_test')
+ *             ->where(['id','=',55])
+ *             ->result();
+ * echo $db->_count;
+ *  
  * - Recorregido de una consulta con foreach
  * foreach ($rows as $row) { echo '<br />'.$row["id"].' '.$row["nombre"]; }
  * 
@@ -24,28 +31,28 @@
  * $valores = ['nombre' => 'jose',
  *            'descripcion' => 'escritor',
  *            'estado' => 1];
- * $db->into('_test')
+ * $db->insert('_test')
  *     ->values($valores)
- *     ->insert()        
+ *     ->result('insert');     
  * 
  * - Update de registros en tabla
  * $valores = ['nombre' => 'manolo',
  *             'descripcion' => 'obrero',
  *             'estado' => '1'];
- * $db->table('_test')
+ * $db->update('_test')
  *     ->set($valores)
  *     ->where(['id','=',54])
- *     ->update();
+ *     ->result('update')
  * 
  * - Borrando registros de una tabla
- * $db->from('_test')
- *     ->where(['id','=',56])
- *     ->delete();
+ * $db->delete('_test')
+ *     ->where(['id','=',63])
+ *     ->result('delete');
  * 
  * - Para mostrar un breve debug de la consulta SQL
  * $db->sql();
  * 
- * - Para mostrar el numero de filas afectadas de un INSERT, UPDATE o DELETE o incluso un SELECT (en MySQL)
+ * - Para mostrar el numero de filas afectadas de un INSERT, UPDATE o DELETE, SELECT COUNT(*)
  * $total = $db->_count;
  * 
  */
@@ -77,20 +84,16 @@ class db {
     const _LIMIT = ' LIMIT ';    
     
     
-    public function __construct(){
-        
+    public function __construct(){        
         // El data source name que es una cadena que tiene una estructura de datos usada para conectar a un origen.
-        $dns = $this->engine.':dbname='.$this->database.";host=".$this->host.";charset=".$this->charset;
-        
+        $dns = $this->engine.':dbname='.$this->database.";host=".$this->host.";charset=".$this->charset;        
         // Opciones que le pasaremos a la conexion PHP Data Objetcs
         $opt = [
             PDO::ATTR_ERRMODE               => PDO::ERRMODE_EXCEPTION,  // errores log
             PDO::ATTR_DEFAULT_FETCH_MODE    => PDO::FETCH_ASSOC,    // por defecto 
             PDO::ATTR_EMULATE_PREPARES      => false, // ¡¡¡ Solo por seguridad !!!
-        ];
-        
-        $this->db = new PDO( $dns, $this->user, $this->pass, $this->$opt ); 
-        
+        ];        
+        $this->db = new PDO( $dns, $this->user, $this->pass, $this->$opt );         
     }
     
     public function query($sql, $params = []){           
@@ -102,8 +105,7 @@ class db {
         }
         if ($query->execute()){ 
             $this->_sql = $query;
-            //$this->_count = $query->rowCount(); // registros afectados
-            //$this->_countRows = $query->fetchColumn(); // numero de registros 
+            if ($this->_select[0] == 'count(*)') { $this->_count = $query->fetchColumn(); } else { $this->_count = $query->rowCount(); }
             return $query;    
         }        
     }    
@@ -113,12 +115,38 @@ class db {
         return $this;                
     }
     
-    function result() {
-        $this->_sql = ' SELECT '.join(',',$this->_select).' FROM '.$this->_table;  
-        if (!empty($this->_where)) $this->_sql .=  $this->_where;
-        if (!empty($this->_order)) $this->_sql .= $this->_order;
-        if (!empty($this->_limit)) $this->_sql .=  $this->_limit;        
-        return $this->query($this->_sql, $this->_params);
+    function result($case) {
+        $option = $case;
+        
+        switch ($option) {
+            
+            case 'insert':
+                $this->_sql = 'INSERT INTO '.$this->_table.' ('.$this->fields.') VALUES ('.$this->ins.')';
+                $this->_params = $this->values; // parametros
+                return $this->query($this->_sql, $this->_params);
+            break;
+            case 'update':
+                if($this->_where) { 
+                    $this->_sql = 'UPDATE '.$this->_table .' SET '.$this->ins.' '.$this->_where;    
+                    $this->_params = array_merge($this->values, $this->_params); // parametros update+where
+                    return $this->query($this->_sql, $this->_params);
+                }
+            break;
+            case 'delete':
+                if($this->_where) {            
+                    $this->_sql = ' DELETE FROM '.$this->_table.' '.$this->_where;            
+                    return $this->query($this->_sql, $this->_params);
+                }
+            break;
+            default:        
+                $this->_sql = ' SELECT '.join(',',$this->_select).' FROM '.$this->_table;  
+                if (!empty($this->_where)) $this->_sql .=  $this->_where;
+                if (!empty($this->_order)) $this->_sql .= $this->_order;
+                if (!empty($this->_limit)) $this->_sql .=  $this->_limit;        
+                return $this->query($this->_sql, $this->_params);
+              
+            break;
+        }
     }    
         
     function where($where = []) {        
@@ -147,10 +175,9 @@ class db {
         }
     }
     
-    public function insert(){
-        $this->_sql = 'INSERT INTO '.$this->_table.' ('.$this->fields.') VALUES ('.$this->ins.')';
-        $this->_params = $this->values; // parametros
-        return $this->query($this->_sql, $this->_params);
+    public function insert($table){
+        $this->table($table);
+        return $this;
     }
     
     public function values($values = []) {        
@@ -165,10 +192,9 @@ class db {
         }
     }
     
-    public function update() {        
-        $this->_sql = 'UPDATE '.$this->_table .' SET '.$this->ins.' '.$this->_where;    
-        $this->_params = array_merge($this->values, $this->_params); // parametros update+where
-        return $this->query($this->_sql, $this->_params);
+    public function update($table) {      
+        $this->table($table);
+        return $this;
     }       
     
     public function set($values = []) {        
@@ -182,16 +208,10 @@ class db {
        }  
     } 
     
-    public function delete() {
-        if($this->_where) {            
-            $this->_sql = ' DELETE FROM '.$this->_table.' '.$this->_where;            
-            return $this->query($this->_sql, $this->_params);
-        }      
-    }     
-    
-   	public function count()	{
-		return $this->_count;
-	}        
+    public function delete($table) {
+        $this->table($table);
+        return $this;
+    }                 
     
     public function exec($sql) {
          $query = $this->db->prepare($sql);  
@@ -207,15 +227,9 @@ class db {
         $this->table($table);
         return $this;
     }
-
-    public function into($table) {
-        $this->table($table);
-        return $this;
-    }
     
     public function sql(){        
         return var_dump($this->_sql);
     }
                 
-} ?>   
-    
+} ?>       
