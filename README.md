@@ -1,6 +1,10 @@
 # PDO CLASS
 
-easy pdo class to make querys
+# easy pdo class to make querys
+
+No tengo razones para crear esta clase ya que PDO es en si ya un wrapper pero si que intento simplificar un poco mas las consultas, sobre todo a la hora de enviar parametros en una consulta insert o update. Seria más cómodo extender la clase PDO pero nunca se sabe si la voy a ampliar para realizar consultas en otras bases de datos diferentes a MySQL.
+
+No soy un crack programando asi que se aceptan sugerencias.
 
 ```php
 $db = new db();
