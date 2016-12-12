@@ -4,6 +4,8 @@
 
 No tengo razones para crear esta clase ya que PDO es en si ya un wrapper pero si que intento simplificar un poco mas las consultas, sobre todo a la hora de enviar parametros en una consulta insert o update. Seria más cómodo extender la clase PDO pero nunca se sabe si la voy a ampliar para realizar consultas en otras bases de datos diferentes a MySQL.
 
+Los ejemplos se realizan en una tabla llamanda _test con 3 campos (nombre, descripcion, estado)
+
 No soy un crack programando asi que se aceptan sugerencias.
 
 ```php
@@ -35,10 +37,9 @@ $valores = ['nombre' => 'jose',
             'descripcion' => 'escritor',
             'estado' => 1];
  
-$rows = $db->select('count(*))
-           ->from('_test')
-           ->where(['id','=',55])
-           ->result();
+$db->insert('_test')
+   ->values($valores)
+   ->result('insert');  
 ```
 
 ### update rows           
