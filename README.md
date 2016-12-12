@@ -6,7 +6,7 @@ easy pdo class to make querys
 $db = new db();
 ```
 
-making a a query 
+### make a a query 
 ```php
 $rows = $db->select('id','nombre')
               ->from('_test')
@@ -16,7 +16,7 @@ $rows = $db->select('id','nombre')
               ->result();
 ```
 
-// count rows              
+### count rows              
 ```php
 $rows = $db->select('count(*))
            ->from('_test')
@@ -25,7 +25,7 @@ $rows = $db->select('count(*))
 echo $db->_count;             
 ```
 
-// insert rows
+### insert rows
 ```php
 $valores = ['nombre' => 'jose',
             'descripcion' => 'escritor',
@@ -37,7 +37,7 @@ $rows = $db->select('count(*))
            ->result();
 ```
 
-// update rows           
+### update rows           
 ```php
 $valores = ['nombre' => 'manolo',
             'descripcion' => 'obrero',
@@ -48,14 +48,14 @@ $db->update('_test')
    ->result('update')           
 ```
 
-// delete a row
+### delete a row
 ```php
 $db->delete('_test')
    ->where(['id','=',63])
    ->result('delete');
 ```
 
-// show SQL query
+### show SQL query
 ```php
 $db->sql();
 ```   
