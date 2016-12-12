@@ -115,11 +115,8 @@ class db {
         return $this;                
     }
     
-    function result($case) {
-        $option = $case;
-        
-        switch ($option) {
-            
+    function result($case) {        
+        switch ($case) {            
             case 'insert':
                 $this->_sql = 'INSERT INTO '.$this->_table.' ('.$this->fields.') VALUES ('.$this->ins.')';
                 $this->_params = $this->values; // parametros
@@ -143,8 +140,7 @@ class db {
                 if (!empty($this->_where)) $this->_sql .=  $this->_where;
                 if (!empty($this->_order)) $this->_sql .= $this->_order;
                 if (!empty($this->_limit)) $this->_sql .=  $this->_limit;        
-                return $this->query($this->_sql, $this->_params);
-              
+                return $this->query($this->_sql, $this->_params);              
             break;
         }
     }    
