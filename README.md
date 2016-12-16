@@ -24,7 +24,7 @@ $rows = $db->select('id','nombre')
 
 ### count rows              
 ```php
-$rows = $db->select('count(*))
+$rows = $db->select('count(*)')
            ->from('_test')
            ->where(['id','=',55])
            ->result();
