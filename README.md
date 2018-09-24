@@ -6,8 +6,6 @@ No tengo razones para crear esta clase ya que PDO es en si ya un wrapper pero si
 
 Los ejemplos se realizan en una tabla llamanda _test con 3 campos (nombre, descripcion, estado)
 
-No soy un crack programando asi que se aceptan sugerencias.
-
 ```php
 $db = new db();
 ```
